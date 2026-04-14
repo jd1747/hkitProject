@@ -57,15 +57,16 @@ DATA_DIR = Path("backend/app/data")
 CSV_CONFIGS = [
     {
         "file_path": DATA_DIR / "response.csv",
-        "columns": ["session_id", "user_name", "timestamp", "q_num", "user_response", "response_time"],
+        "columns": ["session_id", "user_name", "timestamp"] + [f"q{i+1}" for i in range(len(questions))],
     },
     {
         "file_path": DATA_DIR / "results.csv",
-        "columns": ["session_id", "user_name", "timestamp", "self_score", "rt_mean", "rt_var"],
+        "columns": ["session_id", "user_name", "timestamp", "total_score", "result"],
     }
 ]
 
 def init_csv(file_path: Path, columns: list):
+    file_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         with open(file_path, mode="x", newline="", encoding="utf-8-sig") as f:
             csv.writer(f).writerow(columns)

@@ -53,7 +53,7 @@ questions = [
 # -------------------------
 # CSV 헤더 생성
 # -------------------------
-DATA_DIR = Path("app/data")
+DATA_DIR = Path("./app/data")
 CSV_CONFIGS = [
     {
         "file_path": DATA_DIR / "response.csv",

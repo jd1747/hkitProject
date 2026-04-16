@@ -25,9 +25,11 @@ questions = [
 ]
 
 DATA_DIR = Path("./data")
-CSV_CONFIGS = {"response": {
+CSV_CONFIGS = {
+    "response": {
         "path": DATA_DIR / "response.csv",
-        "columns": ["session_id", "user_name", "timestamp"] + [f"q{i+1}" for i in range(len(questions))],
+        "columns": ["session_id", "user_name", "timestamp"]
+        + [f"q{i+1}" for i in range(len(questions))],
     },
     "results": {
         "path": DATA_DIR / "results.csv",
@@ -43,6 +45,7 @@ def init_csv():
         if not file_path.exists():
             with open(file_path, mode="x", newline="", encoding="utf-8-sig") as f:
                 csv.writer(f).writerow(config["columns"])
+
 
 sessions = {}
 responses = {}

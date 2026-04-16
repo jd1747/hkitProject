@@ -2,9 +2,11 @@ import csv
 from pathlib import Path
 
 DATA_DIR = Path("./data")
-CSV_CONFIGS = {"response": {
+CSV_CONFIGS = {
+    "response": {
         "path": DATA_DIR / "response.csv",
-        "columns": ["session_id", "user_name", "timestamp"] + [f"q{i+1}" for i in range(20)],
+        "columns": ["session_id", "user_name", "timestamp"]
+        + [f"q{i+1}" for i in range(20)],
     },
     "results": {
         "path": DATA_DIR / "results.csv",

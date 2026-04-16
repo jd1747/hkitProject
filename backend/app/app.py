@@ -12,6 +12,7 @@ async def lifespan(app: FastAPI):
     try:
         init_csv()
         from app.services.stt_service import preload_model  # temp
+
         preload_model()
     except Exception as e:
         # print(f"Startup Error: {e}")

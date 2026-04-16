@@ -6,9 +6,7 @@ router = APIRouter()
 
 class UserRecordRequest:
     def __init__(
-        self,
-        audio_file: UploadFile = File(...),
-        retry_count: int = Form(...)
+        self, audio_file: UploadFile = File(...), retry_count: int = Form(...)
     ):
         self.audio_file = audio_file
         self.retry_count = retry_count

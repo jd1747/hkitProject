@@ -1,5 +1,6 @@
 from fastapi import APIRouter
-from app.store import responses, warn_score
+from app.store import responses
+from core.config import SCORE_THRESHOLD
 
 router = APIRouter()
 
@@ -12,6 +13,6 @@ def get_result(session_id: str):
         return {"error": "No data"}
 
     total_score = sum(data)
-    result = "주의 필요" if total_score >= warn_score else "정상 범위"
+    result = "주의 필요" if total_score >= SCORE_THRESHOLD else "정상 범위"
 
     return {"total_score": total_score, "result": result}

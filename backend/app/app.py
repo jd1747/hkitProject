@@ -1,35 +1,49 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+from fastapi.staticfiles import StaticFiles
+from app.routers import session, question, answer, result, stt, tts, admin
+from app.repositories.result_repository import init_csv
+from core.config import STATIC_DIR
 
-from app.api import admin, answer, question, result, save, session, stt
-from app.store import init_csv
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        init_csv()
+        from app.services.stt_service import preload_model  # temp
+        preload_model()
+    except Exception as e:
+        # print(f"Startup Error: {e}")
+        raise e
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 모든 프론트 허용 (개발용)
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:4173",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-@app.on_event("startup")
-def startup_event():
-    init_csv()
-
-
 app.include_router(session.router, prefix="/session", tags=["Session"])
 app.include_router(question.router, prefix="/question", tags=["Survey"])
 app.include_router(answer.router, prefix="/answer", tags=["Answer"])
 app.include_router(result.router, prefix="/result", tags=["Data"])
-app.include_router(save.router, prefix="/save", tags=["Data"])
 app.include_router(stt.router, prefix="/stt", tags=["Utility"])
+app.include_router(tts.router, prefix="/tts", tags=["Utility"])
 app.include_router(admin.router, prefix="/admin", tags=["Admin"])
 
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-# 루트 경로 생성
-@app.get("/")
-def root():
-    return {"status": "ok", "message": "Server Working..."}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}

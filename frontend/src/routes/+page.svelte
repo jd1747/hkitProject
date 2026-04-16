@@ -1,73 +1,52 @@
 <script>
+	import { blob } from 'stream/consumers';
+
 	let name = $state('');
 	let session_id = $state(null);
+
 	let question = $state(null);
 	let finished = $state(false);
 	let result = $state(null);
 
+	let retryCount = $state(0);
 	let isListening = $state(false);
 	let isWaitingAnswer = $state(false);
 
-	// TTS +  끝나면 자동 듣기
-	function speakAndListen(text) {
+	let mediaRecorder;
+	let audioChunks = $state([]);
+
+	const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+	const handleNoResponse = () => {
+		console.log('10초 동안 응답이 없어 미응답 처리합니다.');
+		// next logic
+	};
+
+	// TTS
+	function startReading(text) {
 		speechSynthesis.cancel();
 		const msg = new SpeechSynthesisUtterance(text);
 		msg.lang = 'ko-KR';
-
-		msg.onend = () => {
-			if (!finished) {
-				setTimeout(() => {
-					startListening();
-				}, 500);
-			}
-		};
 		speechSynthesis.speak(msg);
 	}
 
 	// STT
-	function startListening() {
-		if (isListening || !isWaitingAnswer) return;
+	async function startRecording() {
+		audioChunks = [];
+		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		mediaRecorder = new MediaRecorder(stream);
 
-		const recognition = new webkitSpeechRecognition();
-		recognition.lang = 'ko-KR';
-		recognition.interimResults = false;
-		recognition.maxAlternatives = 1;
-
-		isListening = true;
-		recognition.onresult = (e) => {
-			const text = e.results[0][0].transcript;
-			console.log('음성 입력: ', text);
-			const value = parseAnswer(text);
-
-			if (value !== null) {
-				isListening = false;
-				isWaitingAnswer = false;
-				answer(value);
-			} else {
-				speakAndListen('이해하지 못했습니다. 0부터 3 중 하나로 말씀해주세요.');
+		mediaRecorder.ondataavailable = (e) => {
+			if (e.data.size > 0) {
+				audioChunks.push(e.data);
 			}
 		};
-
-		recognition.onerror = () => {
-			isListening = false;
-			setTimeout(startListening, 1000);
+		mediaRecorder.onstop = async () => {
+			const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+			await handleVoiceResponse(audioBlob);
+			stream.getTracks().forEach((track) => track.stop());
 		};
-		recognition.onend = () => {
-			isListening = false;
-		};
-		recognition.start();
-	}
 
-	// 음성 - 점수 변환 (temp)
-	function parseAnswer(text) {
-		text = text.replace(/\s+/g, '');
-
-		if (text.includes('0') || text.includes('없') || text.includes('전혀')) return 0;
-		if (text.includes('1') || text.includes('가끔') || text.includes('조금')) return 1;
-		if (text.includes('2') || text.includes('종종') || text.includes('자주')) return 2;
-		if (text.includes('3') || text.includes('대부분') || text.includes('항상')) return 3;
-
-		return null;
+		mediaRecorder.start();
 	}
 
 	// Start
@@ -81,11 +60,9 @@
 		const data = await res.json();
 		session_id = data.session_id;
 
-		speakAndListen('설문을 시작합니다. 질문에 음성으로 답하거나 버튼을 눌러주세요.');
-
-		setTimeout(() => {
-			getQuestion();
-		}, 2000);
+		startReading('설문을 시작합니다. 질문에 음성으로 답하거나 버튼을 눌러주세요.');
+		await delay(2000);
+		getQuestion();
 	}
 
 	// GET questions
@@ -99,18 +76,44 @@
 		} else {
 			question = data;
 			isWaitingAnswer = true;
-			speakAndListen(question.text);
+
+			startReading(question.text);
+			await delay(500);
+			startRecording();
 		}
 	}
 
-	// 자동 답변 (음성)
-	async function answer(value) {
-		await fetch('http://127.0.0.1:8000/answer', {
+	// STT 요청
+	async function handleVoiceResponse(audioBlob) {
+		const formData = new FormData();
+		formData.append('audio_file', audioBlob);
+		formData.append('retry_count', retryCount.toString());
+
+		const res = await fetch('/stt', { method: 'POST', body: formData });
+		const { answer } = await res.json();
+
+		if (answer >= 1 && answer <= 4) {
+			await submitAnswer(answer);
+			retryCount = 0;
+		} else if (answer === 0) {
+			retryCount = 1;
+			startReading('이해하지 못했습니다. 다시 말씀해주세요.');
+			await delay(500);
+			getQuestion();
+		} else if (answer === -1) {
+			alert('');
+			// 수동 전환
+			retryCount = 0;
+		}
+	}
+
+	// 답변 제출
+	async function submitAnswer(value) {
+		const res = await fetch('http://127.0.0.1:8000/answer', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ session_id, answer: value })
 		});
-
 		await getQuestion();
 	}
 
@@ -122,7 +125,7 @@
 		isListening = false;
 		isWaitingAnswer = false;
 
-		answer(value);
+		submitAnswer(value);
 	}
 
 	// GET result

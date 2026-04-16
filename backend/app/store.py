@@ -24,7 +24,7 @@ questions = [
     "과제나 활동을 체계적으로 하는 데 종종 어려움을 겪는다.",
 ]
 
-DATA_DIR = Path("./app/data")
+DATA_DIR = Path("./data")
 CSV_CONFIGS = {"response": {
         "path": DATA_DIR / "response.csv",
         "columns": ["session_id", "user_name", "timestamp"] + [f"q{i+1}" for i in range(len(questions))],

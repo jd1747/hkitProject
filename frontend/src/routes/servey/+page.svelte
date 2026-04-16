@@ -1,48 +1,18 @@
-<script>
-    import { onMount } from "svelte";
-    import { goto } from "$app/navigation";
-    import { resolve } from "$app/paths";
+<script></script>
 
-    let session_id;
-    let question = $state("");
-    let progress = $state("");
+<div class="progress">
+	<div class="progress-bar" style="width: {(question.question_id / 20) * 100}%"></div>
+</div>
 
-    async function load() {
-        const res = await fetch(`http://127.0.0.1:8000/question/${session_id}`);
-        const data = await res.json();
+<p>{question.progress}</p>
+<h3>{question.text}</h3>
 
-        if (data.message === "설문 완료") {
-            goto(resolve("/result"));
-            return;
-        }
+<p style="font-size:12px; color:#888;">🎤 말하거나 아래 버튼 선택</p>
 
-        question = data.text;
-        progress = data.progress;
-    }
+<!-- button fallback -->
+<button class="answer-btn btn0" onclick={() => manualAnswer(0)}>0️⃣ 극히 드물다</button>
+<button class="answer-btn btn1" onclick={() => manualAnswer(1)}>1️⃣ 가끔 있었다</button>
+<button class="answer-btn btn2" onclick={() => manualAnswer(2)}>2️⃣ 종종 있었다</button>
+<button class="answer-btn btn3" onclick={() => manualAnswer(3)}>3️⃣ 대부분 그랬다</button>
 
-    async function answer(val) {
-        await fetch("http://127.0.0.1:8000/answer", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                session_id: session_id,
-                answer: val
-            })
-        });
-
-        load();
-    }
-
-    onMount(() => {
-        session_id = localStorage.getItem("session_id");
-        load();
-    });
-</script>
-
-<h2>{progress}</h2>
-<p>{question}</p>
-
-<button onclick={() => answer(0)}>0️⃣ 극히 드물다</button>
-<button onclick={() => answer(1)}>1️⃣ 가끔 있었다</button>
-<button onclick={() => answer(2)}>2️⃣ 종종 있었다</button>
-<button onclick={() => answer(3)}>3️⃣ 대부분 그랬다</button>
+<button onclick={() => speakAndListen(question.text)}>다시 듣기</button>

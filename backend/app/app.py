@@ -5,15 +5,16 @@ from fastapi.staticfiles import StaticFiles
 from app.routers import session, question, answer, result, stt, tts, admin
 from app.repositories.result_repository import init_csv
 from core.config import STATIC_DIR
+import whisper
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         init_csv()
-        from app.services.stt_service import preload_model  # temp
-
-        preload_model()
+        app.state.model = whisper.load_model("base")
+        # from app.services.stt_service import preload_model
+        # app.state.model = preload_model()
     except Exception as e:
         # print(f"Startup Error: {e}")
         raise e

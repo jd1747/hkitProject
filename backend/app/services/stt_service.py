@@ -1,50 +1,54 @@
-from dotenv import load_dotenv
+from tempfile import NamedTemporaryFile
+import whisper
 import os
-from google.cloud import speech
+import shutil
 
-load_dotenv()
-STT_KEY = os.getenv("GOOGLE_STT_API_KEY")
-
-
-def google_stt_transcribe(audio_content: bytes) -> str:
-    client = speech.SpeechClient()
-    audio = speech.RecognitionAudio(content=audio_content)
-
-    config = speech.RecognitionConfig(
-        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,  # wav
-        sample_rate_hertz=16000,
-        language_code="ko-KR",
-        model="command_and_search",
-        use_enhanced=True,
-    )
-    try:
-        response = client.recognize(config=config, audio=audio)
-        transcript = ""
-        for result in response.results:
-            transcript += result.alternatives[0].transcript
-        return transcript.strip()
-
-    except Exception as e:
-        print(f"STT error: {e}")
-        return ""
-
-
-def determine_answer(text: str) -> int:
-    """텍스트를 보고 1~4번 중 무엇인지 결정 (판정 불가 시 0)"""
-    if not text:
-        return 0
-
-    if any(keyword in text for keyword in ["1", "없", "전혀"]):
-        return 1
-    elif any(keyword in text for keyword in ["2", "가끔", "조금"]):
-        return 2
-    elif any(keyword in text for keyword in ["3", "종종", "자주"]):
-        return 3
-    elif any(keyword in text for keyword in ["4", "거의", "대부분"]):
-        return 4
-    else:  # 판정 불가
-        return 0
+model = whisper.load_model("base")
 
 
 def preload_model():
-    client = speech.SpeechClient()
+    return whisper.load_model("base")  # tiny, base, small, etc.
+
+
+def transcribe_audio(audio_file, model) -> int:
+    """음성 -> 텍스트 변환 & 선택지 판단"""
+    temp_path = ""
+    try:
+        suffix = f".{audio_file.filename.split('.')[-1]}"
+        with NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+            shutil.copyfileobj(audio_file.file, temp_file)
+            temp_path = temp_file.name
+
+        result = model.transcribe(temp_path, language="ko", fp16=False)
+        text = result["text"].strip()
+        return decide_answer(text)
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
+
+
+def decide_answer(text: str) -> int:
+    """텍스트 내용에서 선택지 번호를 추출"""
+    clean_text = text.replace(" ", "")
+
+    # 선택지 판정 관련 코드 (임시)
+    mapping = {
+        "1번": 1,
+        "일번": 1,
+        "첫번째": 1,
+        "2번": 2,
+        "이번": 2,
+        "두번째": 2,
+        "3번": 3,
+        "삼번": 3,
+        "세번째": 3,
+        "4번": 4,
+        "사번": 4,
+        "네번째": 4,
+    }
+
+    for key, value in mapping.items():
+        if key in clean_text:
+            return value
+
+    return 0

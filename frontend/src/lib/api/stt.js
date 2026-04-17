@@ -1,0 +1,1 @@
+const Recognition = window.SpeechRecognitionEvent;

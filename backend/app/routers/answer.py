@@ -5,7 +5,7 @@ from app.store import sessions, questions, responses
 router = APIRouter()
 
 
-@router.post("")
+@router.post("/{session_id}")
 def save_answer(req: AnswerRequest):
     session = sessions.get(req.session_id)
 

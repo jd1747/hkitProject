@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException
-from app.store import sessions, questions
-from app.services import question_service
+from app.store import sessions
+from app.services.question_service import get_question_text, question_numbers
 
 router = APIRouter()
-total_count = question_service.question_numbers
+total_count = question_numbers
 
 
 @router.get("/{session_id}")
@@ -18,7 +18,7 @@ def get_question(session_id: str):
     if idx < total_count:
         return {
             "question_id": idx + 1,
-            "text": question_service.get_question_text(idx),
+            "text": get_question_text(idx),
             "progress": f"{idx+1}/{total_count}",
         }
     else:

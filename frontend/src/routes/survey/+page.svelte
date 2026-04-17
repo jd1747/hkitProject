@@ -38,7 +38,7 @@
 		window.speechSynthesis.cancel();
 		const utterance = new SpeechSynthesisUtterance(text);
 		utterance.lang = 'ko-KR';
-		utterance.rate = 0.85; // 아이들을 위해 천천히
+		utterance.rate = 1.0;
 		utterance.pitch = 1.2; // 밝은 톤
 
 		utterance.onend = () => {
